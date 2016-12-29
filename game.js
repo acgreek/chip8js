@@ -28,9 +28,11 @@ ctx.fillStyle = "red"
 
 function draw() {
 	ctx.clearRect(0, 0, width, height)
-
 	ctx.fillRect(state.x - 5, state.y - 5, 10, 10)
 }
+
+var mycpu = new chip8();
+mycpu.loadGame("PONG");
 
 function loop(timestamp) {
 	var progress = timestamp - lastRender
