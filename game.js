@@ -4,8 +4,8 @@ ctx.moveTo(0,0);
 ctx.lineTo(200,100);
 ctx.stroke();
 
-var width = 800
-var height = 200
+var width = 1000
+var height = 1000
 
 var state = {
 	x: width / 2,
@@ -39,7 +39,7 @@ function draw(emu) {
     for (var x=0; x <mx; x++)  {
 		//attron(COLOR_PAIR(5));
 		if (array[x + (y * mx)] )
-        ctx.fillRect(x - 5, y - 5, 10, 10)
+        ctx.fillRect(x * 5, y * 5, 5, 5)
      }
     }
 }
