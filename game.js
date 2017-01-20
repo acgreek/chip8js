@@ -43,13 +43,39 @@ function draw(emu) {
      }
     }
 }
-function loop(timestamp) {
-	var progress = timestamp - lastRender
+
+var setkeys= new Array (256);
+
+function loop() { // (timestamp) {
+//	var progress = timestamp - lastRender
 	update(mycpu)
 	draw(mycpu)
-	lastRender = timestamp
-	window.requestAnimationFrame(loop)
+//	lastRender = timestamp
+//	window.requestAnimationFrame(loop)
 }
 var lastRender = 0
-window.requestAnimationFrame(loop)
+//window.requestAnimationFrame(loop)
+
+
+document.addEventListener("keypress", khandle, false); 
+//c.onkeydown = khandle
+//c.onkeyup = khandle
+//c.onkeypress = khandle
+function khandle(e) {
+	e = e || event
+//	if (e.type == keypress)
+	mycpu.setKeys(e.keyCode);
+
+	/*
+	var evt = e.type
+	if (evt == keydown) 
+		setKeys[e.keyCode] = 1;
+	else 
+		setKeys[e.keyCode] = 0;
+		*/
+}
+
+setInterval(loop, 10);
+
+
 

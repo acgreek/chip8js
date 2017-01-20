@@ -68,7 +68,7 @@ function OP_X (opcode) { return ((opcode & 0xF00) >> 8);}
 function OP_Y (opcode) { return ((opcode & 0xF0) >> 4);}
 
 function chip8() {
-
+	this.key_is_pressed =false;
 	this.memory = new Array(4096);
 	this.v = new Array(16);
 	this.r = new Array(8);
@@ -92,17 +92,17 @@ chip8.prototype.isDone = function() {
 	return done;
 }
 chip8.prototype.initialize = function () {
-	pc     = 0x200;  // Program counter starts at 0x200
+	this.pc     = 0x200;  // Program counter starts at 0x200
 	//opcode = 0;      // Reset current opcode
-	I      = 0;      // Reset index register
-	sp     = 0;      // Reset stack pointer
+	this.I      = 0;      // Reset index register
+	this.sp     = 0;      // Reset stack pointer
 	// Load fontset
 	for(var i = 0; i < 80; ++i) {
 		this.memory[i] = chip8_fontset[i];
 	}
 	// Reset timers
-	delay_timer=0;
-	sound_timer=0;
+	this.delay_timer=0;
+	this.sound_timer=0;
 }
 chip8.prototype.getMaxX = function() {
 	return this.esm? 128: 64;
@@ -124,7 +124,7 @@ chip8.prototype.LoadInstruction =   function (offset, opcode) {
 }
 chip8.prototype.loadGame =	function (game) {
 	for (var i=0; i< game.length; i++) {
-		this.memory[pc +i ] = game[i];
+		this.memory[this.pc +i ] = game[i];
 	}
 }
 
@@ -143,7 +143,7 @@ chip8.prototype.emulateCycle = 	function () {
 // Emulate one cycle
 chip8.prototype.emulateCycle_= 	function () {
 	this.drawFlag = false;
-	var opcode = this.memory[pc] << 8 | this.memory[pc + 1];
+	var opcode = this.memory[this.pc] << 8 | this.memory[this.pc + 1];
 	var t1,t2;
 	var i,j;
 	switch(opcode & 0xF000) {
@@ -176,12 +176,12 @@ chip8.prototype.emulateCycle_= 	function () {
 					memset(gfx, 0, sizeof(gfx));
 					break;
 				case 0x00EE: // return
-					if (sp == 0) {
+					if (this.sp == 0) {
 						printf("sp == 0 at ps %d\n", pc);
-						done =true;
+						this.done =true;
 					}
-					pc = stack[sp -1] ;
-					sp--;
+					this.pc = this.stack[this.sp -1] ;
+					this.sp--;
 					break; //we want it to move to next instruction
 				default:
 					if ((opcode & 0xFFF0) == 0x00c0) {
@@ -234,32 +234,32 @@ chip8.prototype.emulateCycle_= 	function () {
 			this.v[OP_X(opcode)] += OP_nn(opcode);
 			break;
 		case 0x8000:
-			handle8(opcode);
+			this.handle8(opcode);
 			break;
 		case 0x9000: //9XY0	Cond	if(Vx!=Vy)	Skips the next instruction if VX doesn't equal VY. (Usually the next instruction is a jump to skip a code block)
-			if (v[OP_X(opcode)] != VOP_Y(opcode))
-				pc=(pc +2) & 0xFFF;
+			if (v[OP_X(opcode)] != this.v[OP_Y(opcode)])
+				this.pc=(this.pc +2) & 0xFFF;
 			break;
 		case 0xA000: // ANNN	MEM	I = NNN	Sets I to the address NNN.
-			I = OP_nnn(opcode);
+			this.I = OP_nnn(opcode);
 			break;
 		case 0xB000: // BNNN	Flow	PC=V0+NNN	Jumps to the address NNN plus V0.
-			pc = (v[0] +OP_nnn(opcode)) & 0xFFF;
+			this.pc = (this.v[0] +OP_nnn(opcode)) & 0xFFF;
 			return;
 		case 0xC000: //CXNN	Rand	Vx=rand()&NN	Sets VX to the result of a bitwise and operation on a random number (Typically: 0 to 255) and NN.
-			t1= rand() & OP_nn(opcode);
-			v[OP_X(opcode)] = t1;
+			t1= Math.random() & OP_nn(opcode);
+			this.v[OP_X(opcode)] = t1;
 			break;
 		case 0xD000:  //DXYN	Disp	draw(Vx,Vy,N)	Draws a sprite at coordinate (VX, VY) that has a width of 8 pixels and a height of N pixels. Each row of 8 pixels is read as bit-coded starting from memory location I; I value doesnât change after the execution of this instruction. As described above, VF is set to 1 if any screen pixels are flipped from set to unset when the sprite is drawn, and to 0 if that doesnât happen
-			drawFlag = true;
+			this.drawFlag = true;
 
 			this.v[0xF] = 0;
 			t1=OP_X(opcode);
 			t2=OP_Y(opcode);
 			if (this.esm && ((opcode &0xF) == 0)) {
 				for (j=0; j < (opcode &0xF); j++) {
-					var hi = this.memory[I +2 * j ];
-					var lo = this.memory[I +2 * j +2 ];
+					var hi = this.memory[this.I +2 * j ];
+					var lo = this.memory[this.I +2 * j +2 ];
 					var sprite = hi << 8 | lo;
 					for (var i= 0; i < 16; i++) {
 						var px = (this.v[t1] +i) & 127;
@@ -274,12 +274,12 @@ chip8.prototype.emulateCycle_= 	function () {
 				}
 			}
 			else for (j=0; j < (opcode &0xF); j++) {
-				var pixel = this.memory[I+ j];
+				var pixel = this.memory[this.I+ j];
 				for (var i=0; i< 8; i++) {
 					if((pixel & (0x80 >> i)) != 0)
 					{
 						if(this.gfx[(this.v[t1] + i + ((this.v[t2] + j) * this.getMaxX()))] == 1)
-							v[0xF] = 1;
+							this.v[0xF] = 1;
 						this.gfx[(this.v[t1] + i + ((this.v[t2] + j) * this.getMaxX()))] ^= 1;
 					}
 				}
@@ -288,21 +288,21 @@ chip8.prototype.emulateCycle_= 	function () {
 		case 0xE000:
 			t1= OP_X(opcode);
 			if ((opcode &0xFF) == 0x9E) {
-				if (keypress(v[t1])) //EX9E	KeyOp	if(key()==Vx)	Skips the next instruction if the key stored in VX is pressed. (Usually the next instruction is a jump to skip a code block)
-					pc= (pc +2) & 0xFFF;
+				if (this.keypress(v[t1])) //EX9E	KeyOp	if(key()==Vx)	Skips the next instruction if the key stored in VX is pressed. (Usually the next instruction is a jump to skip a code block)
+					this.pc= (this.pc +2) & 0xFFF;
 			} else { // EXA1	KeyOp	if(key()!=Vx)	Skips the next instruction if the key stored in VX isn't pressed. (Usually the next instruction is a jump to skip a code block)
-				if (!keypress(v[t1]))
-					pc =(pc + 2) &0xFFF;
+				if (!this.keypress(this.v[t1]))
+					this.pc =(this.pc + 2) &0xFFF;
 			}
 			break;
 		case 0xF000:
-			handleF(opcode);
+			this.handleF(opcode);
 			break;
 		default:
 			printf("known opcode: %x \n", opcode);
-			done =true;
+			this.done =true;
 	};
-	pc+=2;
+	this.pc+=2;
 }
 chip8.prototype.keyConvert = function(k) {
 	var ckey=-1;
@@ -313,19 +313,19 @@ chip8.prototype.keyConvert = function(k) {
 		 ckey = 10 + (k - 'a');
 	 */
 	switch(k) {
-		case 'x': return 0;
-		case '1': return 1;
-		case '2': return 2;
-		case '3': return 3;
-		case 'q': return 4;
-		case 'w': return 5;
-		case 'e': return 6;
-		case 'a': return 7;
-		case 's': return 8;
-		case 'd': return 9;
-		case 'z': return 10;
+		case 88: return 0;
+		case 49: return 1;
+		case 50: return 2;
+		case 51: return 3;
+		case 81: return 4;
+		case 87: return 5;
+		case 69: return 6;
+		case 65: return 7;
+		case 83: return 8;
+		case 68: return 9;
+		case 90: return 10;
 		case 'c': return 11;
-		case '4': return 12;
+		case 52: return 12;
 		case 'r': return 13;
 		case 'f': return 14;
 		case 'v': return 15;
@@ -334,24 +334,27 @@ chip8.prototype.keyConvert = function(k) {
 }
 
 chip8.prototype.setKeys = function(k) {
-	ckey = keyConvert(k);
+	ckey = this.keyConvert(k);
 	if (ckey != -1)
-		key[ckey] = 1;
+		this.key[ckey] = 1;
 }
 chip8.prototype.keypress = function (k) {
 	if (k >0xF)
 		return 0;
-	var pressed = key[k];
-	key[k] = 0;
+	var pressed = this.key[k];
+	this.key[k] = 0;
+
 	return pressed;
 }
+//chip8.prototype.getchar= function () {
+//}
 
 chip8.prototype.handle8 = function (opcode) {
 	var Vx = this.v[OP_X(opcode)];
-	var Vy = VOP_Y(opcode);
+	var Vy = this.v[OP_Y(opcode)];
 	switch(opcode &0xF) {
 		case 0: //8XY0	Assign	Vx=Vy	Sets VX to the value of VY.
-			this.v[OP_X(opcode)]=VOP_Y(opcode);
+			this.v[OP_X(opcode)]=this.v[OP_Y(opcode)];
 			break;
 		case 1: //8XY1	BitOp	Vx=Vx|Vy	Sets VX to VX or VY. (Bitwise OR operation)
 			this.v[OP_X(opcode)] |= Vy;
@@ -392,7 +395,7 @@ chip8.prototype.handleF = function(opcode) {
 			this.v[OP_X(opcode)] = this.delay_timer;
 			break;
 		case 0x0A: // FX0A	KeyOp	Vx = get_key()	A key press is awaited, and then stored in VX. (Blocking Operation. All instruction halted until next key event)
-			this.v[OP_X(opcode)] = keyConvert(getchar());
+			this.v[OP_X(opcode)] = keyConvert(this.getchar());
 			break;
 		case 0x15: // FX15	Timer	delay_timer(Vx)	Sets the delay timer to VX.
 			this.delay_timer =this.v[OP_X(opcode)];
@@ -418,13 +421,13 @@ chip8.prototype.handleF = function(opcode) {
 			 Stores the binary-coded decimal representation of VX, with the most significant of three digits at the address in I, the middle digit at I plus 1, and the least significant digit at I plus 2. (In other words, take the decimal representation of VX, place the hundreds digit in memory at location in I, the tens digit at location I+1, and the ones digit at location I+2.)
 			 */
 			var Vx=  this.v[OP_X(opcode)];
-			this.memory[I]     = Vx / 100;
-			this.memory[I + 1] = (Vx / 10) % 10;
-			this.memory[I + 2] = (Vx % 100) % 10;
+			this.memory[this.I]     = Vx / 100;
+			this.memory[this.I + 1] = (Vx / 10) % 10;
+			this.memory[this.I + 2] = (Vx % 100) % 10;
 			break;
 		case 0x55: //V
 			for (var i=0; i<=OP_X(opcode); i++) {
-				this.memory[I+i] = this.v[i];
+				this.memory[this.I+i] = this.v[i];
 			}
 			break;
 		case 0x65: // FX65	MEM	reg_load(Vx,&I)	Fills V0 to VX (including VX) with values from memory starting at address I.[4]
