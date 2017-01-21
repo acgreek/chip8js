@@ -173,7 +173,9 @@ chip8.prototype.emulateCycle_= 	function () {
 					break;
 				case 0x00E0: //clear screen
 					drawFlag = true;
-					memset(gfx, 0, sizeof(gfx));
+					for (var i; i < this.gfx.length; i++) {
+						this.gfx[i] = 0;
+					}
 					break;
 				case 0x00EE: // return
 					if (this.sp == 0) {
@@ -288,7 +290,7 @@ chip8.prototype.emulateCycle_= 	function () {
 		case 0xE000:
 			t1= OP_X(opcode);
 			if ((opcode &0xFF) == 0x9E) {
-				if (this.keypress(v[t1])) //EX9E	KeyOp	if(key()==Vx)	Skips the next instruction if the key stored in VX is pressed. (Usually the next instruction is a jump to skip a code block)
+				if (this.keypress(this.v[t1])) //EX9E	KeyOp	if(key()==Vx)	Skips the next instruction if the key stored in VX is pressed. (Usually the next instruction is a jump to skip a code block)
 					this.pc= (this.pc +2) & 0xFFF;
 			} else { // EXA1	KeyOp	if(key()!=Vx)	Skips the next instruction if the key stored in VX isn't pressed. (Usually the next instruction is a jump to skip a code block)
 				if (!this.keypress(this.v[t1]))
@@ -313,22 +315,22 @@ chip8.prototype.keyConvert = function(k) {
 		 ckey = 10 + (k - 'a');
 	 */
 	switch(k) {
-		case 88: return 0;
+		case 88: return 0; //x
 		case 49: return 1;
 		case 50: return 2;
 		case 51: return 3;
-		case 81: return 4;
-		case 87: return 5;
-		case 69: return 6;
-		case 65: return 7;
-		case 83: return 8;
-		case 68: return 9;
-		case 90: return 10;
-		case 'c': return 11;
-		case 52: return 12;
-		case 'r': return 13;
-		case 'f': return 14;
-		case 'v': return 15;
+		case 81: return 4; //q
+		case 87: return 5; //w
+		case 69: return 6; //e
+		case 65: return 7; //a
+		case 83: return 8; //s
+		case 68: return 9; //d
+		case 90: return 10;//z
+		case 67: return 11;//c
+		case 52: return 12;//4
+		case 82: return 13;//r
+		case 70: return 14;//f
+		case 86: return 15;//v
 	}
 	return ckey;
 }
@@ -376,11 +378,11 @@ chip8.prototype.handle8 = function (opcode) {
 			this.v[OP_X(opcode)]-= Vy;
 			break;
 		case 6: //8XY6	BitOp	Vx >> 1	Shifts VX right by one. VF is set to the value of the least significant bit of VX before the shift.[2]
-			v[0xF] = Vx&1;
+			this.v[0xF] = Vx&1;
 			this.v[OP_X(opcode)]= Vx>> 1;
 			break;
 		case 7: //8XY7	Math	Vx=Vy-Vx	Sets VX to VY minus VX. VF is set to 0 when there's a borrow, and 1 when there isn't.
-			v[0xF] = Vy > Vx;
+			this.v[0xF] = Vy > Vx;
 			this.v[OP_X(opcode)]= Vy - Vx;
 			break;
 		case 0xE: //8XYE	BitOp	Vx << 1	Shifts VX left by one. VF is set to the value of the most significant bit of VX before the shift.[2]
